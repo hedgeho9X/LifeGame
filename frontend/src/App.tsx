@@ -7,6 +7,9 @@ import { StoryDisplay } from './components/StoryDisplay';
 import { TaskList } from './components/TaskList';
 import { StatsDisplay } from './components/StatsDisplay';
 import { RewardAnimation } from './components/RewardAnimation';
+import { ConversationPanel } from './components/ConversationPanel';
+import { Danmaku } from './components/Danmaku';
+import { TherapyTicketList } from './components/TherapyTicketList';
 
 function App() {
   const {
@@ -29,6 +32,11 @@ function App() {
 
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
+  const [showConversation, setShowConversation] = useState(false);
+  const [characterPosition, setCharacterPosition] = useState<'left' | 'right'>('left');
+  const [danmakuMessages, setDanmakuMessages] = useState<string[]>([]);
+  const [showTherapyTickets, setShowTherapyTickets] = useState(false);
+  const [therapyNotification, setTherapyNotification] = useState<string | null>(null);
 
   // 初始化用户
   useEffect(() => {
@@ -72,6 +80,11 @@ function App() {
       setCurrentGoal(goal);
       setStats(goal.stats_data);
       setCharacterState('idle');
+      
+      // 显示目标创建时的夸赞弹幕
+      if (goal.praise_messages && goal.praise_messages.length > 0) {
+        setDanmakuMessages(goal.praise_messages);
+      }
     } catch (err) {
       console.error('Failed to create goal:', err);
       setError('创建目标失败，请重试');
@@ -109,6 +122,14 @@ function App() {
       setCharacterState('celebrating');
       showRewardAnimation(response.rewards);
       
+      // 检查是否获得话疗券
+      if (response.therapy_ticket_awarded) {
+        setTherapyNotification('🎉 恭喜！完成所有任务，获得一张话疗券！💝');
+        setTimeout(() => {
+          setTherapyNotification(null);
+        }, 5000);
+      }
+      
       // 2.5 秒后恢复正常状态
       setTimeout(() => {
         setCharacterState('idle');
@@ -126,6 +147,29 @@ function App() {
   const handleReset = () => {
     setCurrentGoal(null);
     setCharacterState('idle');
+  };
+
+  // 清空所有数值属性
+  const handleResetStats = async () => {
+    if (!user) return;
+    
+    if (!window.confirm('确定要清空所有数值属性历史记录吗？此操作不可恢复！')) {
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await api.resetStats(user.id);
+      // 重新获取用户数值
+      const userStats = await api.getUserStats(user.id);
+      setStats(userStats.stats_data);
+      alert('✅ 数值属性已重置！');
+    } catch (err) {
+      console.error('Failed to reset stats:', err);
+      setError('重置数值失败，请重试');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!initialized) {
@@ -155,6 +199,15 @@ function App() {
         </div>
       )}
 
+      {/* 话疗券获得通知 */}
+      {therapyNotification && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 animate-bounce">
+          <div className="pixel-border bg-gradient-to-r from-purple-600 to-pink-600 p-4">
+            <p className="text-white font-mono text-sm">{therapyNotification}</p>
+          </div>
+        </div>
+      )}
+
       {/* 数值显示 */}
       {Object.keys(stats).length > 0 && <StatsDisplay stats={stats} />}
 
@@ -163,6 +216,94 @@ function App() {
         <RewardAnimation
           rewards={recentRewards}
           onComplete={hideRewardAnimation}
+        />
+      )}
+
+      {/* 弹幕 */}
+      <Danmaku 
+        messages={danmakuMessages} 
+        onComplete={() => setDanmakuMessages([])}
+      />
+
+      {/* 固定位置的角色/桌宠 */}
+      {currentGoal && (
+        <Character 
+          state={characterState} 
+          position={characterPosition}
+          fixed={true}
+        />
+      )}
+
+      {/* 右上角按钮组 */}
+      <div className="fixed top-4 right-4 z-30 flex flex-col gap-2">
+        {/* 话疗券按钮 */}
+        {user && (
+          <button
+            onClick={() => setShowTherapyTickets(true)}
+            className="pixel-border-thin bg-gradient-to-r from-purple-600 to-pink-600 text-white font-mono text-xs px-3 py-2 hover:from-purple-700 hover:to-pink-700"
+          >
+            💝 话疗券
+          </button>
+        )}
+        
+        {/* 角色位置切换按钮 */}
+        {currentGoal && (
+          <button
+            onClick={() => setCharacterPosition(characterPosition === 'left' ? 'right' : 'left')}
+            className="pixel-border-thin bg-black text-white font-mono text-xs px-3 py-2 hover:bg-pixel-dark-gray"
+          >
+            🔄 切换角色位置
+          </button>
+        )}
+
+        {/* 对话按钮 */}
+        {currentGoal && (
+          <button
+            onClick={() => setShowConversation(true)}
+            className="pixel-border-thin bg-white text-black font-mono text-xs px-3 py-2 hover:bg-pixel-light-gray"
+          >
+            💬 与AI对话
+          </button>
+        )}
+
+        {/* 清空数值按钮 */}
+        {user && (
+          <button
+            onClick={handleResetStats}
+            disabled={isLoading}
+            className="pixel-border-thin bg-red-900 text-white font-mono text-xs px-3 py-2 hover:bg-red-800 disabled:opacity-50"
+          >
+            🗑️ 清空数值
+          </button>
+        )}
+      </div>
+
+      {/* 对话面板 */}
+      {currentGoal && (
+        <ConversationPanel
+          goalId={currentGoal.id}
+          goalText={currentGoal.goal_text}
+          currentTasks={currentGoal.tasks}
+          isVisible={showConversation}
+          onClose={() => setShowConversation(false)}
+          onTasksUpdated={(tasks, summary) => {
+            // 更新当前目标的任务列表
+            setCurrentGoal({
+              ...currentGoal,
+              tasks: tasks,
+            });
+            // 显示更新提示
+            alert(`✅ 任务已更新！\n\n${summary}`);
+          }}
+        />
+      )}
+
+      {/* 话疗券列表面板 */}
+      {user && (
+        <TherapyTicketList
+          userId={user.id}
+          isVisible={showTherapyTickets}
+          onClose={() => setShowTherapyTickets(false)}
         />
       )}
 
@@ -180,10 +321,12 @@ function App() {
           </div>
         </div>
 
-        {/* 角色显示 */}
-        <div className="mb-8">
-          <Character state={characterState} />
-        </div>
+        {/* 初始角色显示（未选择目标时） */}
+        {!currentGoal && (
+          <div className="mb-8">
+            <Character state={characterState} position="center" fixed={false} />
+          </div>
+        )}
 
         {/* 主内容区域 */}
         <div className="space-y-6">

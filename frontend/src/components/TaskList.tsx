@@ -69,6 +69,24 @@ export const TaskList: React.FC<TaskListProps> = ({
                       {task.description}
                     </p>
                   )}
+
+                  {/* 技能奖励 */}
+                  {task.skill_rewards && Object.keys(task.skill_rewards).length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {Object.entries(task.skill_rewards).map(([skill, value]) => (
+                        <span
+                          key={skill}
+                          className={`pixel-border-thin px-2 py-1 font-mono text-xs ${
+                            task.completed
+                              ? 'bg-pixel-gray text-white'
+                              : 'bg-white text-black'
+                          }`}
+                        >
+                          {skill} +{value}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
