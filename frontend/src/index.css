@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #000000;
+  color: #FFFFFF;
+  font-family: monospace;
+}
+
+/* 像素风格滚动条 */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000000;
+  border: 2px solid #FFFFFF;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #FFFFFF;
+  border: 1px solid #000000;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #C0C0C0;
+}
+
+/* 像素风格按钮动画 */
+@keyframes pixel-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.pixel-animate {
+  animation: pixel-blink 1s infinite;
+}
+
+/* 像素边框 */
+.pixel-border {
+  border: 3px solid #FFFFFF;
+  box-shadow: 
+    0 0 0 1px #000,
+    0 0 0 3px #FFF,
+    3px 3px 0 3px #000;
+}
+
+.pixel-border-thin {
+  border: 2px solid #FFFFFF;
+  box-shadow: 2px 2px 0 0 #808080;
+}
+
+/* 像素文本阴影 */
+.pixel-text-shadow {
+  text-shadow: 
+    2px 2px 0 #000,
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
+}
+
